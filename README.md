@@ -4,9 +4,9 @@ A skylanders figure editor.
 
 It is not yet ready for public use.
 
-# Building
+## Building
 
-## Windows
+### Windows
 
 Requires:
 
@@ -22,7 +22,7 @@ Compiling:
 * run `cmake -S .. -B . -DCMAKE_PREFIX_PATH=%QT_DIR%\6.9.0\msvc2022_64`
 * run `msbuild Runes.sln /p:Configuration=Debug /p:Platform=x64`
 
-## MacOS
+### MacOS
 
 Requires:
 
