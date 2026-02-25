@@ -20,6 +20,9 @@
 #if _MSC_VER
 #define RUNES_BREAK() \
 	__debugbreak()
+#elif defined(__APPLE__)
+#define RUNES_BREAK() \
+	__builtin_trap();
 #else
 #define RUNES_BREAK() \
 	/* int3 is the x86 instruction to break, nop is there so the debugger */ \

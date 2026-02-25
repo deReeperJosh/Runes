@@ -1,5 +1,5 @@
 #include "PortalAlgos.hpp"
-#include "3rd_party/md5.h"
+#include <openssl/md5.h>
 #include "3rd_party/rijndael.h"
 
 #include <memory>
@@ -18,10 +18,10 @@ void Runes::computeKey(Runes::PortalTagHeader* header, uint8_t blockId, uint8_t 
 	if(!saltReady) readSalt();
 	memcpy(keyComponents + 0x21, salt, 0x35);
 
-	MD5* md5 = new MD5();
-	MD5Open(md5);
-	MD5Digest(md5, keyComponents, 0x56);
-	MD5Close(md5, key);
+	MD5_CTX md5_ctx;
+	MD5_Init(&md5_ctx);
+	MD5_Update(&md5_ctx, keyComponents, 0x56);
+	MD5_Final(key, &md5_ctx);
 }
 void Runes::decryptBlock(Runes::PortalTagHeader* header, uint8_t* cBlockData, uint8_t* pBlockData, uint8_t blockId)
 {
@@ -59,7 +59,7 @@ std::optional<std::string> Runes::readSalt()
 	}
 
 	fseek(f, 0, SEEK_SET);
-	int res = fread(salt, 0x01, sizeof(salt), f);
+	int res = fread(salt, sizeof(salt[0]), sizeof(salt), f);
 	if(res != sizeof(salt))
 	{
 		char buf[128];
@@ -77,12 +77,12 @@ std::optional<std::string> Runes::readSalt()
 	uint8_t keyHash[0x10];
 	uint8_t cData[0x10] {0x58, 0xF4, 0xA7, 0x41, 0x86, 0x5D, 0xFB, 0xA2, 0x74, 0xF3, 0x3E, 0xE4, 0x52, 0x13, 0xD4, 0x39};
 	keyCheck[0x20] = 8;
-	memcpy(keyCheck + 0x21, salt, 0x35);
+	memcpy(keyCheck + 0x21, salt, sizeof(salt));
 
-	MD5* md5 = new MD5();
-	MD5Open(md5);
-	MD5Digest(md5, keyCheck, 0x56);
-	MD5Close(md5, keyHash);
+	MD5_CTX md5_ctx;
+	MD5_Init(&md5_ctx);
+	MD5_Update(&md5_ctx, keyCheck, 0x56);
+	MD5_Final(keyHash, &md5_ctx);
 
 	// decrypt the data...
 

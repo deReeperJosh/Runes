@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
+find_package(OpenSSL COMPONENTS Crypto REQUIRED)
 
 include (${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindFmtLib.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindHidApi.cmake)
@@ -19,8 +20,6 @@ qt_standard_project_setup()
 qt_add_executable(Runes
 	source/3rd_party/crc.cpp
 	source/3rd_party/crc.h
-	source/3rd_party/md5.cpp
-	source/3rd_party/md5.h
 	source/3rd_party/rijndael.cpp
 	source/3rd_party/rijndael.h
 	source/Constants.cpp
@@ -118,4 +117,5 @@ target_link_libraries(Runes PRIVATE
 	fmt::fmt
 	hidapi::hidapi
 	${LIBUSB_LIBRARY}
+	OpenSSL::Crypto
 )
