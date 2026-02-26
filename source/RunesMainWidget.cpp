@@ -7,11 +7,24 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QApplication>
+#include <QTimer>
+
+#include "Hardware/PortalDriver.hpp"
 
 #include "FigureTabWidget.hpp"
+#include "PortalDebuggerWidget.hpp"
 #include "PortalAlgos.hpp"
+#include "RunesDebug.hpp"
 
-RunesMainWidget::RunesMainWidget(QWidget* parent) : QWidget(parent)
+RunesMainWidget::RunesMainWidget(QWidget* parent)
+: QWidget(parent)
+, _tabs(nullptr)
+, _realFigures()
+, _root(nullptr)
+, _menuBar(nullptr)
+, _driver(nullptr)
+, _readTagEventId(Runes::kInvalidEventListenerID)
+, _removeTagEventId(Runes::kInvalidEventListenerID)
 {
 	QVBoxLayout* root = new QVBoxLayout(this);
 
@@ -39,11 +52,17 @@ RunesMainWidget::RunesMainWidget(QWidget* parent) : QWidget(parent)
 
 		if (!sourceFile.isEmpty())
 		{
+			FigureTabWidget* widget = new FigureTabWidget(_tabs);
+			int tabIndex = this->_tabs->addTab(widget, tr("Figure File"));
+
 			Runes::PortalTag* tag = new Runes::PortalTag();
 			tag->_rfidTag = new Runes::RfidTag();
 			tag->ReadFromFile(sourceFile.toLocal8Bit());
-			int tabIndex = this->_tabs->addTab(new FigureTabWidget(tag, sourceFile.toLocal8Bit(), _tabs), tr("Figure File"));
+
+			widget->Initialize(tag);
+
 			this->_tabs->setCurrentIndex(tabIndex);
+
 		}
 	});
 	menuFile->addAction(actOpen);
@@ -61,8 +80,60 @@ RunesMainWidget::RunesMainWidget(QWidget* parent) : QWidget(parent)
 	menuFile->addAction(actSave);
 	_menuBar->addMenu(menuFile);
 
+	QMenu* menuDev = new QMenu(tr("&Developer"), this);
+	QAction* actPortal = new QAction(tr("&Portal"), this);
+	actPortal->setStatusTip(tr("Portal Debugger"));
+	connect(actPortal, &QAction::triggered, [=]()
+	{
+		PortalDebuggerWidget* portalWindow = new PortalDebuggerWidget();
+		portalWindow->show();
+		portalWindow->raise();
+		portalWindow->activateWindow();
+	});
+	menuDev->addAction(actPortal);
+	_menuBar->addMenu(menuDev);
 
 	setLayout(root);
 	layout()->setMenuBar(_menuBar);
 	setWindowTitle(tr("Runes"));
+
+	_driver = new Runes::Portal::PortalDriver();
+
+	_readTagEventId = _driver->GetTagPlacedEvent().AddListener([=](uint8_t index)
+	{
+		FigureTabWidget* widget = new FigureTabWidget(_tabs);
+		_realFigures[index] = widget;
+
+		// start disabled
+		widget->setDisabled(true);
+
+		int tabIndex = this->_tabs->addTab(widget, QString("Real Figure %1").arg(index));
+		this->_tabs->setCurrentIndex(tabIndex);
+	});
+
+	_readTagEventId = _driver->GetTagReadFinishedEvent().AddListener([=](uint8_t index, Runes::PortalTag& newTag)
+	{
+		FigureTabWidget* widget = _realFigures[index];
+
+		// enable now that the figure's been read
+		widget->setDisabled(false);
+
+		widget->Initialize(&newTag);
+	});
+
+	_removeTagEventId = _driver->GetTagRemovedEvent().AddListener([=](uint8_t index)
+	{
+		FigureTabWidget* widget = _realFigures[index];
+
+		this->_tabs->removeTab(this->_tabs->indexOf(widget));
+	});
+
+	QTimer* driverTimer = new QTimer(this);
+	connect(driverTimer, SIGNAL(timeout()), this, SLOT(PumpDriver()));
+	driverTimer->start(50);
+}
+
+void RunesMainWidget::PumpDriver()
+{
+	_driver->Pump();
 }

@@ -12,3 +12,5 @@ publish
 # figure dumps
 *.dmp
 *.sky
+
+.DS_Store

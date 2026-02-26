@@ -21,10 +21,12 @@
 #include <QComboBox>
 #include <QTextEdit>
 #include <QMessageBox>
+#include <QStandardPaths>
 
 #include "kTfbSpyroTag_HatType.hpp"
 #include "kTfbSpyroTag_TrinketType.hpp"
 #include "Constants.hpp"
+#include "RunesDebug.hpp"
 #include "HeroicsNames.hpp"
 #include "toydata.hpp"
 
@@ -35,44 +37,73 @@
 //=============================================================================
 // FigureTabWidget: Constructor for the FigureTabWidget.
 //=============================================================================
-FigureTabWidget::FigureTabWidget(Runes::PortalTag* tag, const char* fileName, QWidget* parent) : QWidget(parent)
+FigureTabWidget::FigureTabWidget(QWidget* parent)
+: QWidget(parent)
+, _tag(nullptr)
+, _spinExp(nullptr)
+, _spinMoney(nullptr)
+, _spinHeroPoints(nullptr)
+, _cmbLevelNumber(nullptr)
+, _cmbHat(nullptr)
+, _cmbTrinket(nullptr)
+, _txtNickname(nullptr)
+, _lblToyName(nullptr)
+, _lblTimePlayed(nullptr)
+, _lblFirstTouched(nullptr)
+, _lblRecentlyTouched(nullptr)
+, _lblWebcode(nullptr)
+, _sgInvalidElement1(nullptr)
+, _sgInvalidElement2(nullptr)
+, _ssfInvalidElement1(nullptr)
+, _ssfInvalidElement2(nullptr)
+, _subGiantsQuests(nullptr)
+, _spinGiantsMonsterMasher(nullptr)
+, _spinGiantsBattleChamp(nullptr)
+, _spinGiantsChowHound(nullptr)
+, _chkGiantsHeroicChallenger(nullptr)
+, _chkGiantsArenaArtist(nullptr)
+, _spinGiantsElementalist(nullptr)
+, _wdGiantsElementalQuest1(nullptr)
+, _wdGiantsElementalQuest2(nullptr)
+, _spinGiantsIndividualQuest(nullptr)
+, _subSwapForceQuests(nullptr)
+, _spinSwapForceBadguyBasher(nullptr)
+, _spinSwapForceFruitFrontiersman(nullptr)
+, _chkSwapForceFlawlessChallenger(nullptr)
+, _spinSwapForceTrueGladiator(nullptr)
+, _chkSwapForceTotallyMaxedOut(nullptr)
+, _spinSwapForceElementalist(nullptr)
+, _wdSwapForceElementalQuest1(nullptr)
+, _wdSwapForceElementalQuest2(nullptr)
+, _spinSwapForceIndividual(nullptr)
+, _subUpgrades(nullptr)
+, _chkUG_B1(nullptr)
+, _chkUG_B2(nullptr)
+, _chkUG_B3(nullptr)
+, _chkUG_B4(nullptr)
+, _cmbUG_Path(nullptr)
+, _chkUG_P1U1(nullptr)
+, _chkUG_P1U2(nullptr)
+, _chkUG_P1U3(nullptr)
+, _chkUG_P2U1(nullptr)
+, _chkUG_P2U2(nullptr)
+, _chkUG_P2U3(nullptr)
+, _chkUG_Soulgem(nullptr)
+, _chkUG_WowPow(nullptr)
+, _lstHeroics(nullptr)
 {
-	this->_tag = tag;
-	this->_sourceFile = QString(fileName);
-
-	ESkylandersGame game;
-	bool fullAltDeco;
-	bool repose;
-	bool lightcore;
-	kTfbSpyroTag_DecoID decoId;
-	tag->DecodeSubtype(&game, &fullAltDeco, &repose, &lightcore, &decoId);
-	if (game >= eSG_Skylanders2016)
-	{
-		// Throw a warning to let the user know that this may irreversably destroy their figure.
-
-		QMessageBox::warning(
-			this,
-			"Imaginators Figure Detected!",
-			"<h1>Warning!</h1>\n\n"
-			"Imaginators figures are digitally signed in such a way that we are not able to regenerate.\n"
-			"it's possible that Runes will overwrite this signature, <b>permanently</b> corrupting the figure if you don't have a backup.\n"
-			"<h1>Proceed with caution and keep plenty of backups!!!!</h1>\n"
-			"I, NefariousTechSupport, am not responsible for any figures that are broken",
-			QMessageBox::StandardButton::Ok,
-			QMessageBox::StandardButton::NoButton);
-	}
-
 	QGridLayout* root = new QGridLayout(this);
 
 	this->_lblToyName = new QLabel(this);
 	this->_lblToyName->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
+	this->_lblToyName->setText("<h2>Loading...</h2>");
 	root->addWidget(_lblToyName, 0, 0, 1, 3);
 
 	uint32_t basicRow = root->rowCount();
 
 	this->_spinMoney = new QSpinBox(this);
 	this->_spinMoney->setRange(0, kMoneyCap);
-	connect(this->_spinMoney, &QSpinBox::valueChanged, [=](int newMoney)
+	connect(this->_spinMoney, &QSpinBox::valueChanged, [this](int newMoney)
 	{
 		this->_tag->_coins = newMoney;
 	});
@@ -81,7 +112,7 @@ FigureTabWidget::FigureTabWidget(Runes::PortalTag* tag, const char* fileName, QW
 
 	this->_spinExp = new QSpinBox(this);
 	this->_spinExp->setRange(0, 197500);
-	connect(this->_spinExp, &QSpinBox::valueChanged, [=](int newExp)
+	connect(this->_spinExp, &QSpinBox::valueChanged, [this](int newExp)
 	{
 		this->_tag->_exp = newExp;
 		this->updateLevelNumber();
@@ -94,7 +125,7 @@ FigureTabWidget::FigureTabWidget(Runes::PortalTag* tag, const char* fileName, QW
 	{
 		this->_cmbHat->addItem(tr(hatNames_en[i]));
 	}
-	connect(this->_cmbHat, &QComboBox::currentIndexChanged, [=](int newIndex)
+	connect(this->_cmbHat, &QComboBox::currentIndexChanged, [this](int newIndex)
 	{
 		this->_tag->_hatType = (kTfbSpyroTag_HatType)newIndex;
 	});
@@ -106,7 +137,7 @@ FigureTabWidget::FigureTabWidget(Runes::PortalTag* tag, const char* fileName, QW
 	{
 		this->_cmbTrinket->addItem(tr(trinketNames_en[i]));
 	}
-	connect(this->_cmbTrinket, &QComboBox::currentIndexChanged, [=](int newIndex)
+	connect(this->_cmbTrinket, &QComboBox::currentIndexChanged, [this](int newIndex)
 	{
 		this->_tag->_trinketType = static_cast<kTfbSpyroTag_TrinketType>(newIndex);
 	});
@@ -115,7 +146,7 @@ FigureTabWidget::FigureTabWidget(Runes::PortalTag* tag, const char* fileName, QW
 
 	this->_spinHeroPoints = new QSpinBox(this);
 	this->_spinHeroPoints->setRange(0, 100);
-	connect(this->_spinHeroPoints, &QSpinBox::valueChanged, [=](int newHeroPoints)
+	connect(this->_spinHeroPoints, &QSpinBox::valueChanged, [this](int newHeroPoints)
 	{
 		this->_tag->_heroPoints = newHeroPoints;
 	});
@@ -127,14 +158,13 @@ FigureTabWidget::FigureTabWidget(Runes::PortalTag* tag, const char* fileName, QW
 	{
 		this->_cmbLevelNumber->addItem(QString("Level %1").arg(i+1));
 	}
-	connect(this->_cmbLevelNumber, &QComboBox::currentIndexChanged, [=](int newIndex)
+	connect(this->_cmbLevelNumber, &QComboBox::currentIndexChanged, [this](int newIndex)
 	{
 		this->_tag->_exp = experienceForLevelMap[newIndex];
 		this->_spinExp->blockSignals(true);
 		this->_spinExp->setValue(this->_tag->_exp);
 		this->_spinExp->blockSignals(false);
 	});
-	root->addWidget(new QLabel(tr("Level"), this), basicRow + 3, 0);
 
 	this->_lblTimePlayed = new QLabel(tr("Time Played: N/A"), this);
 	this->_lblFirstTouched = new QLabel(tr("First Touched: N/A"), this);
@@ -176,7 +206,7 @@ FigureTabWidget::FigureTabWidget(Runes::PortalTag* tag, const char* fileName, QW
 		item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
 		item->setCheckState(Qt::Unchecked);
 	}
-	connect(this->_lstHeroics, &QListWidget::itemChanged, [=](QListWidgetItem* item)
+	connect(this->_lstHeroics, &QListWidget::itemChanged, [this](QListWidgetItem* item)
 	{
 		int32_t index = item->data(Qt::UserRole).toInt();
 		this->_tag->SetHeroic(index, item->checkState() == Qt::Checked);
@@ -189,12 +219,7 @@ FigureTabWidget::FigureTabWidget(Runes::PortalTag* tag, const char* fileName, QW
 	root->setColumnMinimumWidth(1, 224);
 	root->setColumnMinimumWidth(2, 224);
 	root->setColumnMinimumWidth(3, 128);
-
 	setLayout(root);
-	
-	setWindowTitle(tr("Runes"));
-
-	updateFields();
 }
 
 
@@ -210,6 +235,16 @@ FigureTabWidget::~FigureTabWidget()
 }
 
 
+void FigureTabWidget::Initialize(Runes::PortalTag* tag)
+{
+	_tag = tag;
+
+	backup();
+
+	updateFields();
+}
+
+
 //=============================================================================
 // macros for defining elemental quest inputs easier.
 //=============================================================================
@@ -218,7 +253,7 @@ FigureTabWidget::~FigureTabWidget()
 	this->generic = field; \
 	field->setRange(0, max); \
 	field->setValue(this->_tag->questGame[index]); \
-	connect(field, &QSpinBox::valueChanged, [=](int newValue) \
+	connect(field, &QSpinBox::valueChanged, [this](int newValue) \
 	{ \
 		this->_tag->questGame[index] = newValue; \
 	}); \
@@ -227,7 +262,7 @@ FigureTabWidget::~FigureTabWidget()
 	QCheckBox* field = new QCheckBox(); \
 	this->generic = field; \
 	field->setChecked(intToChecked(this->_tag->questGame[index])); \
-	connect(field, &QCheckBox::stateChanged, [=](int newState) \
+	connect(field, &QCheckBox::stateChanged, [this](int newState) \
 	{ \
 		this->_tag->questGame[index] = newState == Qt::Checked ? 1 : 0; \
 	}); \
@@ -468,13 +503,13 @@ void FigureTabWidget::updateLevelNumber()
 #define defineSpinQuest(questGame, field, index, max) \
 	this->field = new QSpinBox(); \
 	this->field->setRange(0, max); \
-	connect(this->field, &QSpinBox::valueChanged, [=](int newValue) \
+	connect(this->field, &QSpinBox::valueChanged, [this](int newValue) \
 	{ \
 		this->_tag->questGame[index] = newValue; \
 	});
 #define defineCheckQuest(questGame, field, index) \
 	this->field = new QCheckBox(); \
-	connect(this->field, &QCheckBox::stateChanged, [=](int newState) \
+	connect(this->field, &QCheckBox::stateChanged, [this](int newState) \
 	{ \
 		this->_tag->questGame[index] = newState == Qt::Checked ? 1 : 0; \
 	});
@@ -539,7 +574,7 @@ void FigureTabWidget::initSwapForceQuests()
 	do \
 	{ \
 		this->field = new QCheckBox(); \
-		connect(this->field, &QCheckBox::stateChanged, [=](int newState) \
+		connect(this->field, &QCheckBox::stateChanged, [this](int newState) \
 		{ \
 			this->_tag->SetUpgrade(upgrade, newState == Qt::Checked); \
 		}); \
@@ -571,7 +606,7 @@ void FigureTabWidget::initUpgrades()
 	_cmbUG_Path->addItem(tr("Primary"));
 	_cmbUG_Path->addItem(tr("Secondary"));
 	
-	connect(_cmbUG_Path, &QComboBox::currentIndexChanged, [=](int newIndex)
+	connect(_cmbUG_Path, &QComboBox::currentIndexChanged, [this](int newIndex)
 	{
 		uint8_t choiceMade = newIndex != 0;
 		uint8_t oldPath = this->_tag->GetUpgrade(Runes::kUpgradeSelectedPath);
@@ -619,4 +654,19 @@ void FigureTabWidget::initUpgrades()
 	_subUpgrades->addRow(tr("Path 2 Upgrade 3"), this->_chkUG_P2U3);
 	_subUpgrades->addRow(tr("Soulgem"),          this->_chkUG_Soulgem);
 	_subUpgrades->addRow(tr("Wow Pow"),          this->_chkUG_WowPow);
+}
+
+
+//=============================================================================
+// backup: Backup the loaded figure
+//=============================================================================
+void FigureTabWidget::backup()
+{
+	QDir runesDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+	// Make dumps folder
+	runesDir.mkpath("dumps");
+
+	QString dumpFile = runesDir.absolutePath().append("/dumps/%1.dmp").arg(this->_tag->_serial, 1, 16);
+
+	this->_tag->_rfidTag->SaveToFile(dumpFile.toUtf8());
 }

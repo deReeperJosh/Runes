@@ -1,10 +1,10 @@
 #include <cstdio>
 #include <fcntl.h>
 #include <iostream>
-#include <io.h>
 #include <assert.h>
 #include <string.h>
 #if defined(DEBUG) && defined(WIN32)
+#include <io.h>
 #include <Windows.h>
 #endif
 
